@@ -15,10 +15,12 @@ import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 import io.restassured.response.Response;
@@ -40,6 +42,8 @@ public class AssetsService{
     Map<String, BigDecimal> priceApi = new HashMap<>();
     BigDecimal totalAssetsUSD = BigDecimal.valueOf(0);
     Map<String,BigDecimal> comparedUsdValue = new HashMap<>();
+    Map<String,BigDecimal> betterEvolution = new HashMap<>();
+    Map<String,BigDecimal> worstEvolution = new HashMap<>();
 
     public void receiveDataCsv() throws IOException {
         Reader reader = Files.newBufferedReader(Paths.get("src/main/resources/test.csv"));
@@ -111,15 +115,17 @@ public class AssetsService{
 
         calculateVariation(csvPriceToCalculate, apiPriceToCalculate, variation);
 
-        System.out.println("total="+totalAssetsUSD.setScale(2, RoundingMode.CEILING)+
-                    ",best_asset=" +
-                    ",best_performance={}," +
-                    "worst_asset={}," +
-                    "worst_performance= {}");
-            System.out.println("NO"+priceCsv.toString());
-            System.out.println("HH"+priceApi.toString());
-            System.out.println("\n"+variation.toString());
-
+        System.out.println("\n\n");
+        System.out.println("-----------------Results---------------");
+        System.out.println("\n\n");
+        System.out.println("total = USD$ "+ totalAssetsUSD.setScale(2, RoundingMode.CEILING)+
+                ", best_asset = " + betterEvolution.keySet().toString().replaceAll("[\\[\\],]","") +
+                ", best_performance = " + betterEvolution.values().toString().replaceAll("[\\[\\],]","") +" percent, " +
+                ", worst_asset = " + worstEvolution.keySet().toString().replaceAll("[\\[\\],]","") +
+                ", worst_performance = " + worstEvolution.values().toString().replaceAll("[\\[\\],]","") +" percent");
+        System.out.println("\n\n");
+        System.out.println("---------------------------------------");
+        System.out.println("\n\n");
         }
 
     public void calculateVariation(List<BigDecimal> csvPriceToCalculate, List<BigDecimal> apiPriceToCalculate, List<BigDecimal> variation) {
@@ -129,15 +135,28 @@ public class AssetsService{
         for(BigDecimal value: priceApi.values()) {
             apiPriceToCalculate.add(value);
         }
-        for(int i = 0; i < priceCsv.size(); i++){
+        for(int i = 0; i < csvAssets.size(); i++){
             BigDecimal res1 = csvPriceToCalculate.get(i).multiply(new BigDecimal(100.0))
                     .divide(apiPriceToCalculate.get(i), 2, RoundingMode.HALF_UP);
             BigDecimal res2 = new BigDecimal(100.0);
-            variation.add(res2.subtract(res1));
+            BigDecimal var = res2.subtract(res1);
+            comparedUsdValue.put(csvAssets.get(i)[1],var);
         }
-        for(int i = 0; i < variation.size(); i++){
+        BigDecimal max = Collections.max(comparedUsdValue.values());
+        BigDecimal min = Collections.min(comparedUsdValue.values());
+        for (Map.Entry<String, BigDecimal> entry : comparedUsdValue.entrySet()) {
+            if (entry.getValue()== max) {
+                betterEvolution.put(entry.getKey(),max);
+            }
+        }
+        for (Map.Entry<String, BigDecimal> entry : comparedUsdValue.entrySet()) {
+            if (entry.getValue()== min) {
+                worstEvolution.put(entry.getKey(),min);
+            }
+        }
 
-        }
+
     }
+
 
 }
